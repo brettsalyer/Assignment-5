@@ -8,20 +8,26 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.TreeSet;
 
 
-public class Facebook {
+public class Facebook implements Comparator<FacebookUser> {
 	private List<FacebookUser> users;
 	HashSet<FacebookUser> friends = new HashSet<>();
 	HashSet<FacebookUser> recommendations = new HashSet<>();
-
+	
 	private static final String PATH = System.getProperty("user.home") + File.separator + "sinclair" + File.separator;
 	private static final String FILE_NAME = "FacebookUsers.dat";
 	
 	Scanner sc = new Scanner(System.in);
+	FacebookUser fbuser;
 	
 	public static void main(String args[]) throws FileNotFoundException, ClassNotFoundException, FacebookException {
 		boolean shouldContinue = true;
@@ -36,74 +42,91 @@ public class Facebook {
 			
 			
 			System.out.println("Menu");
-			System.out.println("1: List Users,");
-			System.out.println("2: Add User,");
-			System.out.println("3: Delete User,");
-			System.out.println("4: Get Password Hint,");
-			System.out.println("5: List Friends,");
-			System.out.println("6: Add friend,");
-			System.out.println("7: Remove friend,");
-			System.out.println("8: Recommend friend,");
-			System.out.println("9: Quit");
+			System.out.println("1: List Users Alphabetically,");
+			System.out.println("2: List Users by Number of Friends,");
+			System.out.println("3: Add User,");
+			System.out.println("4: Delete User,");
+			System.out.println("5: Get Password Hint,");
+			System.out.println("6 List Friends,");
+			System.out.println("7: Add friend,");
+			System.out.println("8: Remove friend,");
+			System.out.println("9: Recommend friend,");
+			System.out.println("10: Like,");
+			System.out.println("11: List likes,");
+			System.out.println("12: Quit");
 			
 			int menuSelection = sc.nextInt();
 			
-			if(menuSelection < 1 || menuSelection > 9) {
+			if(menuSelection < 1 || menuSelection > 12) {
 				System.out.println("Invalid selection");
 			}else {
 			switch(menuSelection) {
 			
 			case 1: 
-				fb.listUsers();
+				fb.listUsersAZ();
 				break;
 			
 			case 2: 
-				fb.addUser();
+				fb.listUsersByFriends();
 				break;
 				
 			case 3:
-				fb.deleteUser();
+				fb.addUser();
+
 				break;
 			
 			case 4: 
+				fb.deleteUser();
+
+				break;
+			
+			case 5:
 				sc.nextLine();
 				System.out.println("Enter a username: ");
 				user = sc.nextLine();
 				fb.displayPasswordHint(user);
 				break;
-			
-			case 5:
-				fb.listFriends(sc);
-				break;
 				
 			case 6:
-				fb.addFriend(sc);	
+				fb.listFriends(sc);
+
 				break;
 			
 			case 7:
-				fb.deleteFriend(sc);
+				fb.addFriend(sc);	
+
 				break;
 				
 			case 8:
-				fb.getValidUser(sc);
-				sc.nextLine();
-				System.out.println("Enter user: ");
-				String recievingUser = sc.nextLine();
-				FacebookUser recieving = fb.findUser(recievingUser);
-				
-				if(fb.users.contains(recieving)) {
-				fb.recommendations.addAll(fb.getRecommendations(recieving));
-				}else {
-					System.out.println("User does not exist");
-				}
-				fb.recommendations = fb.refineRecommends(fb.recommendations, recieving.getFriends());
-				for(FacebookUser person : fb.recommendations) {
-					System.out.println(person.getUsername());
-				}
-				
+				fb.deleteFriend(sc);
+
 				break;
 				
 			case 9: 
+				FacebookUser recieving = fb.getValidUser(sc);
+				
+				if(fb.users.contains(recieving)) {
+				fb.recommendations.addAll(fb.getRecommendations(recieving));
+					
+				List<FacebookUser> temp = new ArrayList<>(fb.recommendations);
+				Collections.sort(temp, new UserCompareByFriends());
+				
+				for (FacebookUser friend : temp) {
+					System.out.println(friend.toString());
+				}
+				}else {
+					System.out.println("User does not exist");
+				}
+				break;
+				
+			case 10:
+				fb.like(sc);
+			
+				break;
+			case 11:
+				fb.listLikes(sc);
+				break;
+			case 12:
 				if(file.exists()) {
 					file.delete();
 				}
@@ -112,6 +135,7 @@ public class Facebook {
 				sc.close();
 				fb.save();
 				break;
+
 			}
 		}
 			
@@ -144,9 +168,18 @@ public class Facebook {
 		}
 	}
 	
-	public void listUsers() {
+	public void listUsersAZ() {
+		//Sort the list of users alphabetically
+		Collections.sort(this.users, new Facebook());
 		for(int i = 0; i < users.size(); i++) {
 			System.out.println(users.get(i).getUsername());
+		}
+	}
+	
+	public void listUsersByFriends() {
+		Collections.sort(this.users, new UserCompareByFriends());
+		for(FacebookUser user : this.users) {
+			System.out.println(user.getUsername());
 		}
 	}
 	
@@ -255,7 +288,7 @@ public class Facebook {
 		
 		if(!this.users.contains(user)) {
 			System.out.println("User does not exist!");
-			return user;
+			return nullUser;
 		}else {
 			System.out.println("Password: ");
 			String password = sc.nextLine();
@@ -324,33 +357,50 @@ public class Facebook {
 	}
 		}
 }
+	private List<FacebookUser> getRecommendations (FacebookUser receivingUser){
+		Set<FacebookUser> ignore = new HashSet<>();
+		ignore.add(receivingUser);
+		return getRecommendations(ignore, receivingUser.getFriends());
+	}	
 	
-	private List<FacebookUser> getRecommendations (FacebookUser recievingUser){
-		List<FacebookUser> recommendedFriends = new ArrayList<>();
+	private List<FacebookUser> getRecommendations (Set<FacebookUser> ignore, List<FacebookUser> userFriends){
+		List<FacebookUser> recommendedFriends = new ArrayList<>();		
+		if(userFriends.isEmpty()) {
+			return recommendedFriends;
+		}
 		
-		ArrayList<FacebookUser> tempFriends = new ArrayList<>(recievingUser.getFriends());
-		//tempFriends.addAll(recievingUser.getFriends());
-		
-		for(FacebookUser user : tempFriends) {
-			if(recievingUser.getFriends().contains(user) && recommendedFriends.contains(user)) {
-				//Do nothing
-			}else {
-				recommendedFriends.add(user);
-				this.recommendations.addAll(getRecommendations(user));
+		for(FacebookUser user : userFriends) {
+			if(ignore.contains(user)) {
+				continue;
 			}
+
+				recommendedFriends.add(user);
+				ignore.add(user);
+				
+				recommendedFriends.addAll(getRecommendations(ignore, user.getFriends()));
 		}
 		return recommendedFriends;
 	}
-	
-	private HashSet<FacebookUser> refineRecommends(HashSet<FacebookUser> recommends, List<FacebookUser> friends){
-		HashSet<FacebookUser> refined = new HashSet<>(recommends);
-		ArrayList<FacebookUser> toGo = new ArrayList<>();
-		
-		for(FacebookUser user : friends) {
-			toGo.add(user);
-		}
-		refined.removeAll(toGo);
-		
-		return refined;
+
+	@Override
+	public int compare(FacebookUser arg0, FacebookUser arg1) {
+		return arg0.compareTo(arg1);
 	}
+
+	public void like(Scanner sc) {
+		FacebookUser user = getValidUser(sc);
+		if(user == null) {
+			//Do nothing
+		}else {
+			System.out.println("What do you like: ");
+			user.like(sc.nextLine());
+		}
+	}
+	
+	public void listLikes(Scanner sc) {
+		FacebookUser user = getValidUser(sc);
+		user.listLikes();
+	}
+
+	
 }

@@ -3,6 +3,7 @@ package edu.sinclair;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.Assert;
@@ -211,6 +212,30 @@ public class FacebookUserTest {
 		
 	}
 	
+	@Test
+	public void testInsertionSort() {
+		ArrayList<String> strings = new ArrayList<>();
+		strings.add("ABC");
+		strings.add("HIJ");
+		strings.add("DEF");
+		ArrayList<String> stringsSorted = new ArrayList<>();
+		stringsSorted.add("ABC");
+		stringsSorted.add("DEF");
+		stringsSorted.add("HIJ");
+		
+		ArrayList<FacebookUser> fbUsers= new ArrayList<>();
+		fbUsers.add(new FacebookUser("Brett", "123"));
+		fbUsers.add(new FacebookUser("Doug", "345"));
+		fbUsers.add(new FacebookUser("Sinclair", "567"));
+		
+		ArrayList<Integer> ints = new ArrayList<>();
+		ints.add(10);
+		ints.add(1);
+		ints.add(14);
+		
+		Utilities.insertionSort2(strings);
+		Assert.assertTrue(strings.equals(stringsSorted));
+	}
 	
 	
 }

@@ -1,13 +1,17 @@
 package edu.sinclair;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Scanner;
+import java.util.TreeSet;
 
 public class FacebookUser extends UserAccount implements Comparable<FacebookUser> {
 
 	private static final long serialVersionUID = -1339454390531323515L;
 	private String passwordHint;
 	private List<FacebookUser> friends = new ArrayList<>();
+	private HashSet<String> likes = new HashSet<>();
 
 	FacebookUser(String username, String password) {
 		super(username, password);
@@ -55,6 +59,18 @@ public class FacebookUser extends UserAccount implements Comparable<FacebookUser
 		}
 		
 		return 0;
+	}
+	
+	public void like(String like) {
+		this.likes.add(like);
+	}
+	
+	public void listLikes() {
+		TreeSet<String> ordered = new TreeSet<>(this.likes); 
+		
+		for(String like : ordered) {
+			System.out.println(like);
+		}
 	}
 
 }
